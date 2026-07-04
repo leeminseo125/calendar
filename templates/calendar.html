@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ year }}년 {{ month }}월 예약 현황{% endblock %}
+{% block content %}
+<section class="calendar-page">
+    <div class="calendar-header">
+        <div class="nav">
+            <a class="button" href="{{ url_for('index', year=prev_year, month=prev_month) }}">‹ 이전 달</a>
+            <h2>{{ year }}년 {{ month }}월</h2>
+            <a class="button" href="{{ url_for('index', year=next_year, month=next_month) }}">다음 달 ›</a>
+        </div>
+        <div class="legend">
+            <span class="dot available"></span> 빈 방
+            <span class="dot booked"></span> 예약 완료
+        </div>
+    </div>
+
+    <table class="calendar">
+        <thead>
+            <tr>
+                <th class="sun">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="sat">토</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for week in weeks %}
+            <tr>
+                {% for day in week %}
+                    {% set is_other_month = day.month != month %}
+                    {% set is_today = day == today %}
+                    <td class="day {% if is_other_month %}other-month{% endif %} {% if is_today %}today{% endif %} {% if loop.index0 == 0 %}sun{% elif loop.index0 == 6 %}sat{% endif %}">
+                        <div class="date">{{ day.day }}</div>
+                        <ul class="rooms">
+                        {% for room in rooms %}
+                            {% set booked = availability.get((room.id, day.year, day.month, day.day), False) %}
+                            <li>
+                                <span class="dot {{ 'booked' if booked else 'available' }}"></span>
+                                <span class="room-name">{{ room.name }}</span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

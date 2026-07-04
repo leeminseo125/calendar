@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}예약 목록{% endblock %}
+{% block content %}
+<section>
+    <div class="toolbar">
+        <div class="view-toggle">
+            <span class="button primary">리스트 보기</span>
+            <a class="button" href="{{ url_for('reservations_calendar') }}">달력 보기</a>
+        </div>
+        <form method="get" class="filters">
+            <label>객실
+                <select name="room_id">
+                    <option value="">전체</option>
+                    {% for room in rooms %}
+                    <option value="{{ room.id }}" {% if selected_room_id == room.id %}selected{% endif %}>{{ room.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>상태
+                <select name="status">
+                    <option value="">전체</option>
+                    <option value="CONFIRMED" {% if selected_status == 'CONFIRMED' %}selected{% endif %}>확정</option>
+                    <option value="CANCELED" {% if selected_status == 'CANCELED' %}selected{% endif %}>취소</option>
+                </select>
+            </label>
+            <button type="submit">필터</button>
+        </form>
+        <a class="button primary" href="{{ url_for('reservation_new') }}">+ 새 예약</a>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>객실</th>
+                <th>게스트</th>
+                <th>연락처</th>
+                <th>체크인</th>
+                <th>체크아웃</th>
+                <th>상태</th>
+                <th>메모</th>
+                <th>액션</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in reservations %}
+            <tr class="status-{{ r.status|lower }}">
+                <td>{{ r.id }}</td>
+                <td>{{ r.room.name }}</td>
+                <td>{{ r.guest_name }}</td>
+                <td>{{ r.phone }}</td>
+                <td>{{ r.check_in_date }}</td>
+                <td>{{ r.check_out_date }}</td>
+                <td>{{ '확정' if r.status == 'CONFIRMED' else '취소' }}</td>
+                <td class="memo">{{ r.memo }}</td>
+                <td class="actions">
+                    <a href="{{ url_for('reservation_edit', res_id=r.id) }}">수정</a>
+                    {% if r.status == 'CONFIRMED' %}
+                    <form method="post" action="{{ url_for('reservation_cancel', res_id=r.id) }}" onsubmit="return confirm('예약을 취소하시겠습니까?');">
+                        <button type="submit" class="link">취소</button>
+                    </form>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('reservation_delete', res_id=r.id) }}" onsubmit="return confirm('예약을 완전히 삭제하시겠습니까?');">
+                        <button type="submit" class="link danger">삭제</button>
+                    </form>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="9" class="empty">예약 내역이 없습니다.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}예약 달력{% endblock %}
+{% block content %}
+<section class="calendar-page">
+    <div class="calendar-header">
+        <div class="nav">
+            <a class="button" href="{{ url_for('reservations_calendar', year=prev_year, month=prev_month) }}">‹ 이전 달</a>
+            <h2>{{ year }}년 {{ month }}월 예약 달력</h2>
+            <a class="button" href="{{ url_for('reservations_calendar', year=next_year, month=next_month) }}">다음 달 ›</a>
+        </div>
+        <div class="view-toggle">
+            <a class="button" href="{{ url_for('reservations') }}">리스트 보기</a>
+            <span class="button primary">달력 보기</span>
+        </div>
+    </div>
+
+    <div class="legend">
+        <span class="dot available"></span> 빈 방
+        <span class="dot booked"></span> 예약됨
+        <span class="hint">날짜를 클릭하면 예약 창이 열립니다</span>
+    </div>
+
+    <table class="calendar admin-calendar">
+        <thead>
+            <tr>
+                <th class="sun">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="sat">토</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for week in weeks %}
+            <tr>
+                {% for day in week %}
+                    {% set is_other_month = day.month != month %}
+                    {% set is_today = day == today %}
+                    {% set date_str = day.isoformat() %}
+                    <td class="day clickable {% if is_other_month %}other-month{% endif %} {% if is_today %}today{% endif %} {% if loop.index0 == 0 %}sun{% elif loop.index0 == 6 %}sat{% endif %}"
+                        data-date="{{ date_str }}">
+                        <div class="date">{{ day.day }}</div>
+                        <ul class="rooms">
+                        {% for room in rooms %}
+                            {% set booked = availability.get((room.id, day.year, day.month, day.day), False) %}
+                            <li>
+                                <span class="dot {{ 'booked' if booked else 'available' }}"></span>
+                                <span class="room-name">{{ room.name }}</span>
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+
+<div id="reservation-modal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel" role="dialog" aria-modal="true">
+        <div class="modal-head">
+            <h3 id="modal-title">예약</h3>
+            <button type="button" class="modal-close" data-close aria-label="닫기">×</button>
+        </div>
+
+        <div class="modal-body">
+            <section class="existing">
+                <h4>이 날 예약</h4>
+                <ul id="modal-reservations"></ul>
+            </section>
+
+            <section class="new-form">
+                <h4>새 예약</h4>
+                <form method="post" action="{{ url_for('reservation_new') }}">
+                    <input type="hidden" name="status" value="CONFIRMED">
+                    <input type="hidden" name="next" id="modal-next" value="">
+                    <label>객실
+                        <select name="room_id" required>
+                            {% for room in rooms %}
+                            <option value="{{ room.id }}">{{ room.name }} ({{ room.capacity }}인)</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label>게스트 이름
+                        <input name="guest_name" required>
+                    </label>
+                    <label>연락처
+                        <input name="phone" required placeholder="010-0000-0000">
+                    </label>
+                    <div class="row">
+                        <label>체크인
+                            <input name="check_in_date" id="modal-check-in" type="date" required>
+                        </label>
+                        <label>체크아웃
+                            <input name="check_out_date" id="modal-check-out" type="date" required>
+                        </label>
+                    </div>
+                    <label>메모 (선택)
+                        <textarea name="memo" rows="2"></textarea>
+                    </label>
+                    <div class="actions">
+                        <button type="submit" class="primary">예약 등록</button>
+                        <button type="button" class="button" data-close>닫기</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const reservationsByDate = {{ reservations_by_date | tojson }};
+    const currentUrl = window.location.pathname + window.location.search;
+    document.getElementById('modal-next').value = currentUrl;
+
+    const modal = document.getElementById('reservation-modal');
+    const title = document.getElementById('modal-title');
+    const listEl = document.getElementById('modal-reservations');
+    const checkIn = document.getElementById('modal-check-in');
+    const checkOut = document.getElementById('modal-check-out');
+
+    function statusLabel(s) { return s === 'CONFIRMED' ? '확정' : '취소'; }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => (
+            {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+        ));
+    }
+
+    function nextDay(dateStr) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        dt.setDate(dt.getDate() + 1);
+        const pad = n => String(n).padStart(2, '0');
+        return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    }
+
+    function openModal(dateStr) {
+        title.textContent = dateStr + ' 예약';
+        checkIn.value = dateStr;
+        checkOut.value = nextDay(dateStr);
+
+        const items = reservationsByDate[dateStr] || [];
+        if (items.length === 0) {
+            listEl.innerHTML = '<li class="empty">예약이 없습니다.</li>';
+        } else {
+            listEl.innerHTML = items.map(r => `
+                <li class="res-item status-${r.status.toLowerCase()}">
+                    <div>
+                        <strong>${escapeHtml(r.room_name)}</strong>
+                        · ${escapeHtml(r.guest_name)}
+                        <span class="phone">${escapeHtml(r.phone)}</span>
+                        <span class="status-tag">${statusLabel(r.status)}</span>
+                    </div>
+                    <div class="range">${r.check_in} ~ ${r.check_out}</div>
+                    <div class="actions">
+                        <a href="/reservations/${r.id}/edit">수정</a>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeModal() {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.querySelectorAll('td.day.clickable').forEach(cell => {
+        cell.addEventListener('click', () => openModal(cell.dataset.date));
+    });
+
+    modal.querySelectorAll('[data-close]').forEach(el => {
+        el.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
+})();
+</script>
+{% endblock %}

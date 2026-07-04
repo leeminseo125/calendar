@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ '예약 수정' if reservation else '새 예약' }}{% endblock %}
+{% block content %}
+<section class="card">
+    <h2>{{ '예약 수정' if reservation else '새 예약' }}</h2>
+    <form method="post">
+        <label>객실
+            <select name="room_id" required>
+                {% for room in rooms %}
+                <option value="{{ room.id }}" {% if reservation and reservation.room_id == room.id %}selected{% endif %}>{{ room.name }} ({{ room.capacity }}인)</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>게스트 이름
+            <input name="guest_name" required value="{{ reservation.guest_name if reservation else '' }}">
+        </label>
+        <label>연락처
+            <input name="phone" required value="{{ reservation.phone if reservation else '' }}">
+        </label>
+        <div class="row">
+            <label>체크인
+                <input name="check_in_date" type="date" required value="{{ reservation.check_in_date if reservation else '' }}">
+            </label>
+            <label>체크아웃
+                <input name="check_out_date" type="date" required value="{{ reservation.check_out_date if reservation else '' }}">
+            </label>
+        </div>
+        <label>상태
+            <select name="status">
+                <option value="CONFIRMED" {% if not reservation or reservation.status == 'CONFIRMED' %}selected{% endif %}>확정</option>
+                <option value="CANCELED" {% if reservation and reservation.status == 'CANCELED' %}selected{% endif %}>취소</option>
+            </select>
+        </label>
+        <label>메모
+            <textarea name="memo" rows="4">{{ reservation.memo if reservation else '' }}</textarea>
+        </label>
+        <div class="actions">
+            <button type="submit" class="primary">저장</button>
+            <a href="{{ url_for('reservations') }}" class="button">취소</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

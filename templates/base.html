@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}예약 현황{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+    <h1><a href="{{ url_for('index') }}">예약 현황</a></h1>
+    <nav>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('reservations_calendar') }}">예약 달력</a>
+            <a href="{{ url_for('reservations') }}">예약 리스트</a>
+            <a href="{{ url_for('rooms') }}">객실</a>
+            <span class="user">{{ current_user.username }}</span>
+            <a href="{{ url_for('logout') }}">로그아웃</a>
+        {% else %}
+            <a class="button admin-link" href="{{ url_for('login') }}">관리자 로그인</a>
+        {% endif %}
+    </nav>
+</header>
+
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

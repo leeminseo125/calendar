@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}객실 목록{% endblock %}
+{% block content %}
+<section>
+    <h2>객실</h2>
+    <table>
+        <thead>
+            <tr><th>ID</th><th>이름</th><th>수용 인원</th><th>설명</th></tr>
+        </thead>
+        <tbody>
+        {% for room in rooms %}
+            <tr>
+                <td>{{ room.id }}</td>
+                <td>{{ room.name }}</td>
+                <td>{{ room.capacity }}인</td>
+                <td>{{ room.description }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
